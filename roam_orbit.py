@@ -144,6 +144,92 @@ class KeyValue:
     def __repr__(self):
         return f"<KeyValue(key={self.key}, value={self.value})>"
 
+class RoamOrbiter(block_content, feed, scheduler=None):
+    def __init__(self, block_content, feed, scheduler):
+        self.block_content = block_content
+        self.feed = feed
+        self.scheduler = scheduler or self.feed.get_scheduler()
+        self.feed.init(self.block_content)
+        self.scheduler.init(self.block_content)
+    
+    def swap_feed(self, new_feed):
+    	feed_kv = self.feed.feed_kv
+    	feed_kv.value = self.new_feed.name
+    	new_feed.feed_kv = feed_kv
+    	self.feed = new_feed
+
+    def swap_scheduler(self, new_scheduler):
+    	name_kv = self.scheduler.name_kv
+    	name_kv.value = new_scheduler.name
+    	new_scheduler.name_kv = name_kv
+    	new_scheduler.factor_kv = self.scheduler.factor_kv
+    	new_scheduler.interval_kv = self.scheduler.interval_kv
+    	new_scheduler.due_kv = self.scheduler.due_kv
+    
+    	idx = self.scheduler.remove_buttons()
+    	new_scheduler.insert_buttons(idx, self.block_content)
+
+    	new_scheduler.add_counters(self.block_content)
+    	self.scheduler = new_scheduler
+
+class Scheduler:
+    def __init__(self, name, interval, factor):
+        self.name = name
+        self.interval = interval 
+        self.factor = factor
+        self.responses = responses
+        self.counter_keys = [f"{self.name}_{r}" for r in self.responses]
+
+    def init(self, block_content):
+        for r in self.responses:
+            block_content.set_default_button(r)
+            self.response_buttons = block_content.get_button(r)
+
+        block_content.set_default_kv("interval", self.interval)
+        self.interval_kv = block_content.get_kv("interval")
+
+        block_content.set_default_kv("factor", self.factor)
+        self.factor_kv = block_content.get_kv("factor")
+
+        due = dt.datetime.now() + dt.timedelta(days=self.interval)
+        block_content.set_default_kv("due", due)
+        self.due_kv = block_content.get_kv("due")
+
+        for key in self.counter_keys:
+            block_content.set_default_kv(key, 0)
+            self.counter_kvs = block_content.get_kv(key)
+
+    def update(self, block_content, response_num):
+        counter_key = self.counter_keys[response_num]
+        block_content.set(counter_key, self.get(counter_key)+1)
+
+        block_content.set("interval", self.scheduler(
+            int(self.get("interval")), 
+            int(self.get("factor")), 
+            int(self.get("first_interval"))))
+
+        block_content.set("due", dt.datetime.now() + dt.timedelta(days=self.get("interval")))
+
+    def remove_buttons(self, block_content):
+        idx = block_content.index(self.response_buttons[0])
+        for button in self.response_buttons:
+            block_content.remove(button)
+        return idx
+
+    def insert_buttons(self, idx, block_content):
+        for i, button in enumerate(self.response_buttons):
+            block_content.insert(idx+i, button)
+
+class Feed:
+    def __init__(self, name, scheduler):
+        self.name = name
+        self.scheduler = scheduler
+        self.feed_key = "feed"
+
+    def init(self, block_content):
+        self.block_kv.set_default_kv(self.feed_key, self.name)
+        self.feed_kv = self.block_kv.get_kv(self.feed_key)
+    
 class ToReview:
     name = "to-review"
     responses = ("cool","meh","boring")
@@ -303,11 +389,14 @@ if __name__=="__main__":
     #text = 'Wait what? I thought a current was carrying the signal, what is then? #SomedayMaybe {{Review History: {"Interval": 0, "Past Reviews": [], "Next Review": "[[due: 2020-07-08]]"}}} #[[[[type]]:to-think]]'
     #text = "{{[[TODO]]}} so something"
 
-    text = '{{[[TODO]]}} Finish figuring out how Certificate Authorities work #SomedayMaybe {{Review History: {"Interval": 0, "Past Reviews": [], "Next Review": "[[due: 2020-07-10]]"}}}'
-    #text = '{{[[TODO]]}} something I want to review {{thought-provoking}} {{not}} #[[[[type]]:to-think]] #[[[[interval]]:1]] #[[[[factor]]:3]] #[[[[due]]:[[July 20th, 2020]]]] #[[[[count0]]:0]] #[[[[count1]]:0]]'
+    #text = '{{[[TODO]]}} Finish figuring out how Certificate Authorities work #SomedayMaybe {{Review History: {"Interval": 0, "Past Reviews": [], "Next Review": "[[due: 2020-07-10]]"}}}'
+    text = '{{[[TODO]]}} something I want to review {{thought-provoking}} {{not}} #[[[[type]]:to-think]] #[[[[interval]]:1]] #[[[[factor]]:3]] #[[[[due]]:[[July 20th, 2020]]]] #[[[[count0]]:0]] #[[[[count1]]:0]]'
     print(text)
-    text = update(text, 1)
-    print(text)
+    #text = update(text, 1)
+    #print(text)
+    bc_kv = BlockContentKV.from_string(text)
+    item = ToThink(bc_kv)
+    import pdb; pdb.set_trace()
     
     #text = init(text, "to-think")
     #print(text)
