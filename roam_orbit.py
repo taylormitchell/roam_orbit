@@ -48,8 +48,19 @@ class BlockContentKV:
             if b==item:
                 return b
 
-    def add(self, item, add_whitespace=True):
-        if not self.get(item):
+    def remove(self, item):
+        self.block_items.remove(item)
+
+    def index(self, item):
+        for i, b in enumerate(self.block_items):
+            if b==item:
+                return i
+
+    def insert(self, index, item):
+        self.block_items.insert(index, item)
+
+    def add(self, item, add_whitespace=True, allow_duplicate=False):
+        if not self.get(item) or allow_duplicate:
             if add_whitespace and not self.end_in_whitespace():
                 self.block_items.append(String(" "))
             self.block_items.append(item)
@@ -146,7 +157,7 @@ class KeyValue:
     def __repr__(self):
         return f"<KeyValue(key={self.key}, value={self.value})>"
 
-class RoamOrbiter(block_content, feed, scheduler=None):
+class RoamOrbiter:
     def __init__(self, block_content, feed, scheduler):
         self.block_content = block_content
         self.feed = feed
@@ -175,17 +186,21 @@ class RoamOrbiter(block_content, feed, scheduler=None):
     	self.scheduler = new_scheduler
 
 class Scheduler:
-    def __init__(self, name, interval, factor):
+    def __init__(self, name, interval, factor, responses=[]):
         self.name = name
         self.interval = interval 
         self.factor = factor
         self.responses = responses
         self.counter_keys = [f"{self.name}_{r}" for r in self.responses]
+        self.response_buttons = [Button(r) for r in self.responses]
 
     def init(self, block_content):
-        for r in self.responses:
-            block_content.set_default_button(r)
-            self.response_buttons = block_content.get_button(r)
+        """
+        TODO: this method assumes that none of the metadata that it's
+        adding already exists in the block content
+        """
+        for button in self.response_buttons:
+            block_content.add(button)
 
         block_content.set_kv("interval", self.interval)
         self.interval_kv = block_content.get_kv("interval")
@@ -220,7 +235,9 @@ class Scheduler:
 
     def insert_buttons(self, idx, block_content):
         for i, button in enumerate(self.response_buttons):
-            block_content.insert(idx+i, button)
+            block_content.insert(idx+(2*i), button)
+            if i != len(self.response_buttons)-1:
+                block_content.insert(idx+(2*i+1), String(" "))
 
 class Feed:
     def __init__(self, name, scheduler):
