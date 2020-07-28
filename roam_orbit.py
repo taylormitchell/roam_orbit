@@ -58,6 +58,8 @@ class BlockContentKV:
         kv = self.get_kv(key)
         if kv:
             kv.value = value
+        else:
+            self.add_kv(key, value)
 
     def get_kv(self, key):
         for item in self.block_items:
@@ -185,18 +187,18 @@ class Scheduler:
             block_content.set_default_button(r)
             self.response_buttons = block_content.get_button(r)
 
-        block_content.set_default_kv("interval", self.interval)
+        block_content.set_kv("interval", self.interval)
         self.interval_kv = block_content.get_kv("interval")
 
-        block_content.set_default_kv("factor", self.factor)
+        block_content.set_kv("factor", self.factor)
         self.factor_kv = block_content.get_kv("factor")
 
         due = dt.datetime.now() + dt.timedelta(days=self.interval)
-        block_content.set_default_kv("due", due)
+        block_content.set_kv("due", due)
         self.due_kv = block_content.get_kv("due")
 
         for key in self.counter_keys:
-            block_content.set_default_kv(key, 0)
+            block_content.set_kv(key, 0)
             self.counter_kvs = block_content.get_kv(key)
 
     def update(self, block_content, response_num):
@@ -379,27 +381,6 @@ def handle_review_history(block_kv):
     return block_kv
 
 
-if __name__=="__main__":
-
-    #text = "{{[[TODO]]}} so something {{cool}} {{meh}} {{boring}} #[[[[type]]:to-review]] #[[[[interval]]:4]] #[[[[factor]]:4]] #[[[[due]]:[[July 11th, 2020]]]] #[[[[count0]]:1]] #[[[[count1]]:2]] #[[[[count2]]:0]]"
-    #text = '{{[[TODO]]}} How to bring lessons learned like this one to my attention?: ((8jKuHxR84)) #SomedayMaybe  {{Review History: {"Interval": 0, "Past Reviews": [], "Next Review": "[[due: 2020-07-14]]"}}}'
-    #text = "{{[[TODO]]}} so something #[[[[type]]:to-think]] #[[[[interval]]:4]] #[[[[factor]]:4]] #[[[[due]]: [[July 11th, 2020]]]] #[[[[count0]]:1]] #[[[[count1]]:2]] #[[[[count2]]:0]]"
-
-    #text = '{{[[TODO]]}} Finish figuring out how Certificate Authorities work #SomedayMaybe {{Review History: {"Interval": 0, "Past Reviews": [], "Next Review": "[[due: 2020-07-10]]"}}}'
-    #text = 'Wait what? I thought a current was carrying the signal, what is then? #SomedayMaybe {{Review History: {"Interval": 0, "Past Reviews": [], "Next Review": "[[due: 2020-07-08]]"}}} #[[[[type]]:to-think]]'
-    #text = "{{[[TODO]]}} so something"
-
-    #text = '{{[[TODO]]}} Finish figuring out how Certificate Authorities work #SomedayMaybe {{Review History: {"Interval": 0, "Past Reviews": [], "Next Review": "[[due: 2020-07-10]]"}}}'
-    text = '{{[[TODO]]}} something I want to review {{thought-provoking}} {{not}} #[[[[type]]:to-think]] #[[[[interval]]:1]] #[[[[factor]]:3]] #[[[[due]]:[[July 20th, 2020]]]] #[[[[count0]]:0]] #[[[[count1]]:0]]'
-    print(text)
-    #text = update(text, 1)
-    #print(text)
-    bc_kv = BlockContentKV.from_string(text)
-    item = ToThink(bc_kv)
-    import pdb; pdb.set_trace()
-    
-    #text = init(text, "to-think")
-    #print(text)
 
 
 
