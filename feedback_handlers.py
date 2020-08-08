@@ -15,6 +15,7 @@ class FeedbackHandler:
     def add_response(self, block_content, response_num):
         counter_key = self.counter_keys[response_num]
         counter = block_content.get_kv(counter_key)
+
         counter.value += 1
 
     def add_handler_name(self, block_content):

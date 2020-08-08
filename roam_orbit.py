@@ -101,6 +101,30 @@ def convert_old_roam_orbit(block_content):
      return block_content
 
 
+def convert_old_key_values(block_content):
+    for i, item in enumerate(block_content.block_items):
+        # Skip items which aren't KeyValues used by roam orbit
+        if type(item)!=KeyValue:
+            continue
+        roam_orbit_keys = ["feed","schedule","interval","due","factor","feedback"]
+        for _,cls in feedback_handlers.items():
+            roam_orbit_keys += cls().counter_keys
+        key = item.key.title if type(item.key)==PageRef else item.key 
+        if key not in roam_orbit_keys:
+            continue
+
+        if type(item.key)==PageRef:
+            item.key = item.key.title
+        if type(item.sep)==PageRef:
+            item.sep = item.sep.title
+        if type(item.value)==PageRef:
+            item.value = item.value.title
+        if item.sep==":":
+            item.sep = ": "
+
+    return block_content
+
+
 class RoamOrbiterManager:
     def __init__(self, block_content, feed_handler, schedule_hander=None, feedback_handler=None):
         self.block_content = block_content
@@ -133,6 +157,7 @@ class RoamOrbiterManager:
 
         block_content = convert_review_history(block_content)
         block_content = convert_old_roam_orbit(block_content)
+        block_content = convert_old_key_values(block_content)
 
         # If a handler was specified, use that.
         # If not, check if one is specified in the string and use that if it is.

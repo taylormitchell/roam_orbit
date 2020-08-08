@@ -862,47 +862,98 @@ class KeyValue:
         RE_FLOAT = "^([1-9]\d*|0).\d+$"
         if not (type(item) in (PageRef, PageTag)):
             raise ValueError("item must be PageRef or PageTag")
-        if type(item._title[0])!=PageRef:
-            raise ValueError("PageRef title must start with a PageRef") 
 
-        key = item._title[0].title
-        # String value
-        if len(item._title[1:])==1 and type(item._title[1])==String:
-            match = re.search(f"^({sep}\s*)(.+)$", item._title[1].string)
-            if match:
-                sep = match.group(1)
-                value = match.group(2)
-                if re.match(RE_INT, value):
-                    value = int(value)
-                elif re.match(RE_FLOAT, value):
-                    value = float(value)
-                else:
-                    value = value
-            else:
-                raise ValueError("Syntax problem with the value")
-        # PageRef value
-        elif (len(item._title[1:])==2) and (type(item._title[1])==String) and (type(item._title[2])==PageRef):
-            match = re.search(f"^{sep}\s*$", item._title[1].string)
-            if match:
-                sep = match.group()
-                value = item._title[2]
-                # If the page ref is a date, set `value` to a datetime value.
-                try: 
-                    value = strptime_day_suffix(value.title, format="%B %d, %Y")
-                except:
-                    pass
-            else:
-                raise ValueError("Syntax problem with the value")
-        else:
-            raise ValueError("Value must be a single string or pageref")
+        block_content = item._title
+
+        # Case - [[key:value]]
+        if len(block_content)==1 and type(block_content[0])==String:
+            string = block_content[0].string
+            m = re.search(f"{sep}\s*", string)
+            if not m: 
+                raise ValueError("item is not a KeyValue")
+            key, sep, value = string[:m.start()], m.group(), string[m.end():]
+            value = cls.parse_value(value)
+
+        # Case - [[key:[[value]]]]
+        elif len(block_content)==2 and type(block_content[0])==String:
+            string = block_content[0].string
+            m = re.search(f"{sep}\s*$", string) # string ends with separator
+            if not m: 
+                raise ValueError("item is not a KeyValue")
+            key, sep = string[:m.start()], m.group()
+            value = cls.parse_value(value)
+
+        # Case - [[[[key]]:value]]
+        elif len(block_content)==2 and type(block_content[1])==String:
+            string = block_content[1].string
+            m = re.search(f"^{sep}\s*", string) # string ends with separator
+            if not m: 
+                raise ValueError("item is not a KeyValue")
+            key, sep, value = block_content[0], m.group(), string[m.end():]
+            value = cls.parse_value(value)
+
+        # Case - [[[[key]]:[[value]]]]
+        elif len(block_content)==3 and type(block_content[1])==String:
+            string = block_content[1].string
+            m = re.search(f"^{sep}\s*$", string) 
+            if not m: 
+                raise ValueError("item is not a KeyValue")
+            key, sep, value = block_content[0], m.group(), block_content[-1]
+            value = cls.parse_value(value)
+
+        # Case - [[[[key]][[:]]value]] or [[[[key]][[:]][[value]]]]
+        elif len(block_content)==3 and type(block_content[1])==PageRef:
+            string = block_content[1].title
+            m = re.search(f"^{sep}\s*$", string) 
+            if not m: 
+                raise ValueError("item is not a KeyValue")
+            key, sep, value = block_content
+            value = cls.parse_value(value)
         
+        else:
+            raise ValueError("item is not a KeyValue")
+
         return cls(key, value, sep)
 
+    @classmethod
+    def parse_value(cls, obj):
+        "Convert object to int, float, or date"
+        RE_INT = "^[1-9]\d*$|^0$"
+        RE_FLOAT = "^([1-9]\d*|0).\d+$"
+        if type(obj)==String: obj = obj.string
+
+        if type(obj)==str:
+            if re.match(RE_INT, obj):
+                return int(obj)
+            elif re.match(RE_FLOAT, obj):
+                return float(obj)
+            else:
+                return cls.parse_date(obj)
+        elif type(obj)==PageRef: 
+            res = cls.parse_date(obj.title)
+            return res if type(res)==dt.datetime else obj
+        else:
+            raise ValueError("obj type isn't supported")
+    
+    @classmethod
+    def parse_date(cls, string):
+        try: return dt.datetime.strptime(string, "%Y-%m-%d")
+        except ValueError: pass
+        try: return strptime_day_suffix(string, format="%B %d, %Y")
+        except ValueError: pass
+        return string
+
     def to_string(self):
+        # key to string
+        key = self.key.to_string() if type(self.key)==PageRef else self.key
+        # sep to string
+        sep = self.sep.to_string() if type(self.sep)==PageRef else self.sep
+        # value to string
         if type(self.value)==PageRef:
             value = self.value.to_string()
         elif type(self.value)==dt.datetime:
-            value = strftime_day_suffix(self.value, format="[[%B %d, %Y]]")
+            #value = strftime_day_suffix(self.value, format="[[%B %d, %Y]]")
+            value = dt.datetime.strftime(self.value, format="%Y-%m-%d")
         elif type(self.value)==int:
             value = str(self.value)
         elif type(self.value)==float:
@@ -911,8 +962,7 @@ class KeyValue:
             value = self.value
         else:
             raise ValueError
-        key = PageRef(self.key).to_string()
-        sep = self.sep
+
         return f"#[[{key}{sep}{value}]]"
 
     def __eq__(self, other):
