@@ -53,20 +53,18 @@ TO_REVIEW_FACTOR = 3
 TO_REVIEW_INIT_INTERVAL = 1
 TO_REVIEW_FIRST_INTERVAL = 2
 DEFAULT_FEED = "ToReview"
+ROAM_ORBIT_TAG = "Roam Orbit"
 
 scheduler_handlers = {o.__name__: o for o in [ExpDefault, ExpReset, Periodically]}
 feed_handlers = {o.__name__: o for o in [ToReview, ToThink]}
 feedback_handlers = {o.__name__: o for o in [Vote, ThoughtProvoking]}
 
 roam_orbit_keys = []
-for _,cls in scheduler_handlers.items():
-    roam_orbit_keys += cls().keys
-for _,cls in feed_handlers.items():
-    roam_orbit_keys += cls().keys
-for _,cls in feedback_handlers.items():
-    roam_orbit_keys += cls().keys
-roam_orbit_keys = list(set(roam_orbit_keys))
-
+for handlers in [feed_handlers, scheduler_handlers, feedback_handlers]:
+    for cls in handlers.values():
+        for key in cls().keys:
+            if key not in roam_orbit_keys:
+                roam_orbit_keys.append(key)
 roam_orbit_btns = []
 for cls in feedback_handlers.values():
     for btn in cls().response_buttons:
@@ -138,8 +136,8 @@ def convert_old_key_values(block_content):
     return block_content
 
 
-def collapse_key_values(block_content):
-    # Collect roam orbit KeyValues and Buttons
+def collapse_roam_orbit(block_content):
+    # Collect roam orbit items
     kvs, btns = [], []
     for key in roam_orbit_keys:
         kv = block_content.get_kv(key)
@@ -151,6 +149,9 @@ def collapse_key_values(block_content):
         if btn:
             btns.append(btn)
             block_content.remove(btn)
+    roam_orbit_tag = block_content.get(PageTag.from_string(f"#[[{ROAM_ORBIT_TAG}]]"))
+    if roam_orbit_tag:
+        block_content.remove(roam_orbit_tag)
 
     # Remove extra whitespace
     items = block_content.block_items
@@ -160,10 +161,15 @@ def collapse_key_values(block_content):
     # Remove trailing whitespace
     while block_content.block_items[-1]==String(" "):
         del block_content.block_items[-1]
+    if type(block_content.block_items[-1])==String:
+        item = block_content.block_items[-1]
+        item.string = re.sub("\s*$","", item.string)
 
     for btn in btns:
         block_content.append(String(" "))
         block_content.append(btn)
+    if roam_orbit_tag:
+        block_content.append(roam_orbit_tag)
     for kv in kvs:
         block_content.append(kv)
 
@@ -176,6 +182,7 @@ class RoamOrbiterManager:
         self.set_feed_handler(feed_handler)
         self.set_schedule_handler(schedule_hander or feed_handler.get_schedule_handler())
         self.set_feedback_handler(feedback_handler or feed_handler.get_feedback_handler())
+        self.block_content.set_default(PageTag.from_string(f"#[[{ROAM_ORBIT_TAG}]]"))
     
     def process_response(self, response_num):
         self.feedback_handler.add_response(self.block_content, response_num)
@@ -229,7 +236,7 @@ class RoamOrbiterManager:
 
     def to_string(self, collapse=True):
         if collapse:
-            self.block_content = collapse_key_values(self.block_content)
+            self.block_content = collapse_roam_orbit(self.block_content)
         return self.block_content.to_string()
 
 
