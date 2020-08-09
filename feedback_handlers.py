@@ -6,6 +6,7 @@ class FeedbackHandler:
         self.responses = responses
         self.counter_keys = [f"{r}_count" for r in self.responses]
         self.response_buttons = [Button(r) for r in self.responses]
+        self.keys = ["feedback"] + self.counter_keys 
 
     def update(self, block_content, btn_loc="before kvs"):
         self.add_handler_name(block_content)

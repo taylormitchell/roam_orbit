@@ -58,6 +58,22 @@ scheduler_handlers = {o.__name__: o for o in [ExpDefault, ExpReset, Periodically
 feed_handlers = {o.__name__: o for o in [ToReview, ToThink]}
 feedback_handlers = {o.__name__: o for o in [Vote, ThoughtProvoking]}
 
+roam_orbit_keys = []
+for _,cls in scheduler_handlers.items():
+    roam_orbit_keys += cls().keys
+for _,cls in feed_handlers.items():
+    roam_orbit_keys += cls().keys
+for _,cls in feedback_handlers.items():
+    roam_orbit_keys += cls().keys
+roam_orbit_keys = list(set(roam_orbit_keys))
+
+roam_orbit_btns = []
+for cls in feedback_handlers.values():
+    for btn in cls().response_buttons:
+        if btn not in roam_orbit_btns:
+            roam_orbit_btns.append(btn)
+
+
 def convert_review_history(block_content):
     items_remove = []
     for i, item in enumerate(block_content.block_items):
@@ -106,14 +122,6 @@ def convert_old_key_values(block_content):
         # Skip items which aren't KeyValues used by roam orbit
         if type(item)!=KeyValue:
             continue
-
-        roam_orbit_keys = []
-        for _,cls in scheduler_handlers.items():
-            roam_orbit_keys += cls().keys
-        for _,cls in feed_handlers.items():
-            roam_orbit_keys += cls().keys
-        for _,cls in feedback_handlers.items():
-            roam_orbit_keys += cls().counter_keys
         key = item.key.title if type(item.key)==PageRef else item.key 
         if key not in set(roam_orbit_keys):
             continue
@@ -126,6 +134,38 @@ def convert_old_key_values(block_content):
             item.value = item.value.title
         if item.sep==":":
             item.sep = ": "
+
+    return block_content
+
+
+def collapse_key_values(block_content):
+    # Collect roam orbit KeyValues and Buttons
+    kvs, btns = [], []
+    for key in roam_orbit_keys:
+        kv = block_content.get_kv(key)
+        if kv:
+            kvs.append(kv)
+            block_content.remove(kv)
+    for btn in roam_orbit_btns:
+        btn = block_content.get(btn)
+        if btn:
+            btns.append(btn)
+            block_content.remove(btn)
+
+    # Remove extra whitespace
+    items = block_content.block_items
+    for i in list(range(len(items[:-1])))[::-1]:
+        if items[i]==String(" ") and items[i+1]==String(" "):
+            del items[i+1]
+    # Remove trailing whitespace
+    while block_content.block_items[-1]==String(" "):
+        del block_content.block_items[-1]
+
+    for btn in btns:
+        block_content.append(String(" "))
+        block_content.append(btn)
+    for kv in kvs:
+        block_content.append(kv)
 
     return block_content
 
@@ -187,7 +227,9 @@ class RoamOrbiterManager:
 
         return cls(block_content, feed_handler, schedule_handler, feedback_handler)
 
-    def to_string(self):
+    def to_string(self, collapse=True):
+        if collapse:
+            self.block_content = collapse_key_values(self.block_content)
         return self.block_content.to_string()
 
 
