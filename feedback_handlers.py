@@ -1,8 +1,7 @@
 from roam.content import *
 
 class FeedbackHandler:
-    def __init__(self, name, responses):
-        self.name = name
+    def __init__(self, responses):
         self.responses = responses
         self.counter_keys = [f"{r}_count" for r in self.responses] + ["total_count"]
         self.response_buttons = [Button(r) for r in self.responses]
@@ -54,15 +53,20 @@ class FeedbackHandler:
         for key in self.counter_keys:
             block_content.set_default_kv(key, 0)
 
+
 class Vote(FeedbackHandler):
     def __init__(self):
-        name = "up_down"
         responses = ["↑","↓"]
-        super().__init__(name, responses)
+        super().__init__(responses)
 
 
 class ThoughtProvoking(FeedbackHandler):
     def __init__(self):
-        name = "thought_provoking"
+        responses = ["thoughts", "none"]
+        super().__init__(responses)
+
+
+class OldThoughtProvoking(FeedbackHandler):
+    def __init__(self):
         responses = ["thought-provoking", "not"]
-        super().__init__(name, responses)
+        super().__init__(responses)

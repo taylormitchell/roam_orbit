@@ -57,7 +57,7 @@ ROAM_ORBIT_TAG = "Roam Orbit"
 
 scheduler_handlers = {o.__name__: o for o in [ExpDefault, ExpReset, Periodically]}
 feed_handlers = {o.__name__: o for o in [ToReview, ToThink]}
-feedback_handlers = {o.__name__: o for o in [Vote, ThoughtProvoking]}
+feedback_handlers = {o.__name__: o for o in [Vote, ThoughtProvoking, OldThoughtProvoking]}
 
 roam_orbit_keys = []
 for handlers in [feed_handlers, scheduler_handlers, feedback_handlers]:
@@ -136,6 +136,27 @@ def convert_old_key_values(block_content):
     return block_content
 
 
+def convert_old_thought_provoking_names(block_content):
+    old_feedback_handler = OldThoughtProvoking()
+    new_feedback_handler = ThoughtProvoking()
+    # Replace buttons
+    for i, btn in enumerate(old_feedback_handler.response_buttons):
+        idx = block_content.index(btn) 
+        if idx:
+            block_content.block_items[idx] = new_feedback_handler.response_buttons[i]
+    # Replace counters
+    for i, key in enumerate(old_feedback_handler.counter_keys):
+        kv = block_content.get_kv(key)
+        if kv:
+            kv.key = new_feedback_handler.counter_keys[i]
+    # Replace feedback name
+    kv = block_content.get_kv("feedback")
+    if kv:
+        kv.value = new_feedback_handler.__class__.__name__
+
+    return block_content
+
+
 def collapse_roam_orbit(block_content):
     # Collect roam orbit items
     kvs, btns = [], []
@@ -210,7 +231,7 @@ class RoamOrbiterManager:
         block_content = convert_review_history(block_content)
         block_content = convert_old_roam_orbit(block_content)
         block_content = convert_old_key_values(block_content)
-
+        block_content = convert_old_thought_provoking_names(block_content)
         # If a handler was specified, use that.
         # If not, check if one is specified in the string and use that if it is.
         # Otherwise, set to a default. 
