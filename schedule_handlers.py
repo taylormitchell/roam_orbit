@@ -5,6 +5,7 @@ class ScheduleHandler:
     def __init__(self, name, init_interval=1):
         self.name = name
         self.init_interval = init_interval 
+        self.keys = ["schedule","interval","due"]
 
     def update(self, block_content, btn_loc="before kvs"):
         block_content.set_kv("schedule", self.__class__.__name__)
@@ -22,6 +23,7 @@ class ExpDefault(ScheduleHandler):
     def __init__(self, init_interval=1, init_factor=2):
         super().__init__("ExpSpacer", init_interval)
         self.init_factor = init_factor
+        self.keys += ["factor"]
 
     def update(self, block_content):
         super().update(block_content)
@@ -50,6 +52,7 @@ class ExpReset(ScheduleHandler):
     def __init__(self, init_interval=1, init_factor=2):
         super().__init__("ExpSpacer", init_interval)
         self.init_factor = init_factor
+        self.keys += ["factor"]
 
     def update(self, block_content):
         super().update(block_content)

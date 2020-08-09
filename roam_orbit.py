@@ -106,11 +106,16 @@ def convert_old_key_values(block_content):
         # Skip items which aren't KeyValues used by roam orbit
         if type(item)!=KeyValue:
             continue
-        roam_orbit_keys = ["feed","schedule","interval","due","factor","feedback"]
+
+        roam_orbit_keys = []
+        for _,cls in scheduler_handlers.items():
+            roam_orbit_keys += cls().keys
+        for _,cls in feed_handlers.items():
+            roam_orbit_keys += cls().keys
         for _,cls in feedback_handlers.items():
             roam_orbit_keys += cls().counter_keys
         key = item.key.title if type(item.key)==PageRef else item.key 
-        if key not in roam_orbit_keys:
+        if key not in set(roam_orbit_keys):
             continue
 
         if type(item.key)==PageRef:
