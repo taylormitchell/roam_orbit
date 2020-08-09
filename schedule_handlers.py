@@ -64,7 +64,7 @@ class ExpReset(ScheduleHandler):
         due = block_content.get_kv("due")
 
         if response in ["↑","thought-provoking"]:
-            interval.value = self.init_interval
+            pass # leave the interval the same
         else:
             interval.value = self.get_next_interval(interval.value, factor.value)
         due.value = dt.datetime.now() + dt.timedelta(days=interval.value)
