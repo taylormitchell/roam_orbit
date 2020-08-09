@@ -4,7 +4,7 @@ class FeedbackHandler:
     def __init__(self, name, responses):
         self.name = name
         self.responses = responses
-        self.counter_keys = [f"{r}_count" for r in self.responses]
+        self.counter_keys = [f"{r}_count" for r in self.responses] + ["total_count"]
         self.response_buttons = [Button(r) for r in self.responses]
         self.keys = ["feedback"] + self.counter_keys 
 
@@ -15,9 +15,10 @@ class FeedbackHandler:
 
     def add_response(self, block_content, response_num):
         counter_key = self.counter_keys[response_num]
-        counter = block_content.get_kv(counter_key)
-
-        counter.value += 1
+        res_counter = block_content.get_kv(counter_key)
+        res_counter.value += 1
+        tot_counter = block_content.get_kv("total_count")
+        tot_counter.value += 1
 
     def add_handler_name(self, block_content):
         block_content.set_kv("feedback", self.__class__.__name__)
