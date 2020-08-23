@@ -53,7 +53,7 @@ TO_REVIEW_FACTOR = 3
 TO_REVIEW_INIT_INTERVAL = 1
 TO_REVIEW_FIRST_INTERVAL = 2
 DEFAULT_FEED = "ToReview"
-ROAM_ORBIT_TAG = "Roam Orbit"
+ROAM_ORBIT_TAG = "Roam Orbiter"
 
 scheduler_handlers = {o.__name__: o for o in [ExpDefault, ExpReset, Periodically]}
 feed_handlers = {o.__name__: o for o in [ToReview, ToThink]}
@@ -142,7 +142,7 @@ def convert_old_thought_provoking_names(block_content):
     # Replace buttons
     for i, btn in enumerate(old_feedback_handler.response_buttons):
         idx = block_content.index(btn) 
-        if idx:
+        if idx is not None:
             block_content.block_items[idx] = new_feedback_handler.response_buttons[i]
     # Replace counters
     for i, key in enumerate(old_feedback_handler.counter_keys):
@@ -180,11 +180,11 @@ def collapse_roam_orbit(block_content):
         if items[i]==String(" ") and items[i+1]==String(" "):
             del items[i+1]
     # Remove trailing whitespace
-    while block_content.block_items[-1]==String(" "):
-        del block_content.block_items[-1]
-    if type(block_content.block_items[-1])==String:
-        item = block_content.block_items[-1]
-        item.string = re.sub("\s*$","", item.string)
+    items = block_content.block_items
+    while len(items)>0 and items[-1]==String(" "):
+        del items[-1]
+    if len(items)>0 and type(items[-1])==String:
+        items[-1].string = re.sub("\s*$","", items[-1].string)
 
     for btn in btns:
         block_content.append(String(" "))
@@ -211,6 +211,8 @@ class RoamOrbiterManager:
         self.schedule_handler.schedule(self.block_content, response)
 
     def set_feedback_handler(self, feedback_handler):
+        if hasattr(self, "feedback_handler"):
+            self.feedback_handler.remove_buttons(self.block_content)
         self.feedback_handler = feedback_handler
         self.feedback_handler.update(self.block_content)
 
@@ -239,6 +241,11 @@ class RoamOrbiterManager:
         if not feed:
             if block_content.get_kv("feed"):
                 feed = block_content.get_kv("feed").value
+            elif block_content.get(PageRef("To-Write")) or \
+                    block_content.get(PageRef("To-Think")) or \
+                    block_content.get(PageTag("To-Write")) or \
+                    block_content.get(PageTag("To-Think")):
+                feed = "ToThink"
             else:
                 feed = DEFAULT_FEED
         feed_handler = feed_handlers[feed]()
@@ -270,17 +277,23 @@ def main(text, action, arg):
             orbiter_manager = RoamOrbiterManager.from_string(text, feed="ToThink")
         else:
             orbiter_manager = RoamOrbiterManager.from_string(text)
+        return orbiter_manager.to_string()
+
+    orbiter_manager = RoamOrbiterManager.from_string(text)
+    if action=="update":
+        pass
     elif action=="change_schedule":
-        orbiter_manager = RoamOrbiterManager.from_string(text)
-        orbiter_manager.set_scheduler(schedulers[arg])
+        orbiter_manager.set_scheduler_handler(scheduler_handlers[arg]())
     elif action=="change_feed":
-        orbiter_manager = RoamOrbiterManager.from_string(text)
-        orbiter_manager.set_feed(feeds[arg])
+        feed_handler = feed_handlers[arg]()
+        sch_handler = feed_handler.get_schedule_handler()
+        fb_handler = feed_handler.get_feedback_handler()
+        orbiter_manager.set_feed_handler(feed_handler)
+        orbiter_manager.set_schedule_handler(sch_handler)
+        orbiter_manager.set_feedback_handler(fb_handler)
     elif action=="change_feedback_type":
-        orbiter_manager = RoamOrbiterManager.from_string(text)
-        orbiter_manager.set_feedback_type(feeds[arg])
+        orbiter_manager.set_feedback_type_handler(feedback_handlers[arg]())
     elif action=="add_response":
-        orbiter_manager = RoamOrbiterManager.from_string(text)
         orbiter_manager.process_response(int(arg))
     else:
         raise ValueError(f"'{action}' isn't a supported action")
@@ -290,5 +303,5 @@ def main(text, action, arg):
 if __name__=="__main__":
     text = sys.argv[1]
     action = sys.argv[2]
-    arg = sys.argv[3] 
+    arg = sys.argv[3] if len(sys.argv)>3 else None 
     print(main(text, action, arg))
