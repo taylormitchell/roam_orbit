@@ -7,7 +7,7 @@ class FeedbackHandler:
         self.response_buttons = [Button(r) for r in self.responses]
         self.keys = ["feedback"] + self.counter_keys 
 
-    def update(self, block_content, btn_loc="before kvs"):
+    def update_metadata(self, block_content, btn_loc="before kvs"):
         self.add_handler_name(block_content)
         self.add_counters(block_content)
         self.insert_buttons(block_content, btn_loc)

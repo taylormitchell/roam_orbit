@@ -5,7 +5,7 @@ class ToReview:
     def __init__(self):
         self.keys = ["feed"]
 
-    def update(self, block_content):
+    def update_metadata(self, block_content):
         block_content.set_kv("feed", self.__class__.__name__)
 
     def get_schedule_handler(self):
@@ -19,7 +19,7 @@ class ToThink:
     def __init__(self):
         self.keys = ["feed"]
 
-    def update(self, block_content):
+    def update_metadata(self, block_content):
         block_content.set_kv("feed", self.__class__.__name__)
 
     def get_schedule_handler(self):

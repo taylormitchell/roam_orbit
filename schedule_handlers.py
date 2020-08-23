@@ -7,7 +7,7 @@ class ScheduleHandler:
         self.init_interval = init_interval 
         self.keys = ["schedule","interval","due"]
 
-    def update(self, block_content, btn_loc="before kvs"):
+    def update_metadata(self, block_content, btn_loc="before kvs"):
         block_content.set_kv("schedule", self.__class__.__name__)
         block_content.set_default_kv("interval", self.init_interval)
         due = dt.datetime.now() + dt.timedelta(days=self.init_interval)
@@ -25,8 +25,8 @@ class ExpDefault(ScheduleHandler):
         self.init_factor = init_factor
         self.keys += ["factor"]
 
-    def update(self, block_content):
-        super().update(block_content)
+    def update_metadata(self, block_content):
+        super().update_metadata(block_content)
         block_content.set_default_kv("factor", self.init_factor)
 
     def schedule(self, block_content, response):
@@ -54,8 +54,8 @@ class ExpReset(ScheduleHandler):
         self.init_factor = init_factor
         self.keys += ["factor"]
 
-    def update(self, block_content):
-        super().update(block_content)
+    def update_metadata(self, block_content):
+        super().update_metadata(block_content)
         block_content.set_default_kv("factor", self.init_factor)
 
     def schedule(self, block_content, response):

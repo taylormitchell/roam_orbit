@@ -214,15 +214,15 @@ class RoamOrbiterManager:
         if hasattr(self, "feedback_handler"):
             self.feedback_handler.remove_buttons(self.block_content)
         self.feedback_handler = feedback_handler
-        self.feedback_handler.update(self.block_content)
+        self.feedback_handler.update_metadata(self.block_content)
 
     def set_schedule_handler(self, schedule_handler):
         self.schedule_handler = schedule_handler
-        self.schedule_handler.update(self.block_content)
+        self.schedule_handler.update_metadata(self.block_content)
 
     def set_feed_handler(self, feed):
         self.feed = feed
-        self.feed.update(self.block_content)
+        self.feed.update_metadata(self.block_content)
 
     @classmethod
     def from_string(cls, string, feed=None, sched=None, feedback=None):
