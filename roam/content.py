@@ -851,13 +851,13 @@ class BlockContentKV:
         return len(self.block_items)
 
 class KeyValue:
-    def __init__(self, key, value, sep=":"):
+    def __init__(self, key, value, sep=": "):
         self.key = key
         self.value = value
         self.sep = sep
 
     @classmethod
-    def from_item(cls, item, sep=":"):
+    def from_item(cls, item, sep=": "):
         RE_INT = "^[1-9]\d*$|^0$"
         RE_FLOAT = "^([1-9]\d*|0).\d+$"
         if not (type(item) in (PageRef, PageTag)):
