@@ -158,7 +158,8 @@ def convert_old_thought_provoking_names(block_content):
 
 
 def convert_toreview_scheduler(block_content):
-    if block_content.get_kv("feed").value=="ToReview":
+    kv = block_content.get_kv("feed")
+    if kv and kv.value=="ToReview":
         block_content.set_kv("schedule", "ExpVarFactor")
         kv = block_content.get_kv("factor")
         block_content.remove(kv)
