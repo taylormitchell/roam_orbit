@@ -55,7 +55,7 @@ TO_REVIEW_FIRST_INTERVAL = 2
 DEFAULT_FEED = "ToReview"
 ROAM_ORBIT_TAG = "Roam Orbiter"
 
-scheduler_handlers = {o.__name__: o for o in [ExpDefault, ExpReset, Periodically]}
+scheduler_handlers = {o.__name__: o for o in [ExpDefault, ExpReset, ExpVarFactor, Periodically]}
 feed_handlers = {o.__name__: o for o in [ToReview, ToThink]}
 feedback_handlers = {o.__name__: o for o in [Vote, ThoughtProvoking, OldThoughtProvoking]}
 
@@ -157,6 +157,14 @@ def convert_old_thought_provoking_names(block_content):
     return block_content
 
 
+def convert_toreview_scheduler(block_content):
+    if block_content.get_kv("feed").value=="ToReview":
+        block_content.set_kv("schedule", "ExpVarFactor")
+        kv = block_content.get_kv("factor")
+        block_content.remove(kv)
+    return block_content
+
+
 def collapse_roam_orbit(block_content):
     # Collect roam orbit items
     kvs, btns = [], []
@@ -207,8 +215,7 @@ class RoamOrbiterManager:
     
     def process_response(self, response_num):
         self.feedback_handler.add_response(self.block_content, response_num)
-        response = self.feedback_handler.response_num_to_name(response_num)
-        self.schedule_handler.schedule(self.block_content, response)
+        self.schedule_handler.schedule(self.block_content, response_num)
 
     def set_feedback_handler(self, feedback_handler):
         if hasattr(self, "feedback_handler"):
@@ -234,6 +241,7 @@ class RoamOrbiterManager:
         block_content = convert_old_roam_orbit(block_content)
         block_content = convert_old_key_values(block_content)
         block_content = convert_old_thought_provoking_names(block_content)
+        block_content = convert_toreview_scheduler(block_content)
         # If a handler was specified, use that.
         # If not, check if one is specified in the string and use that if it is.
         # Otherwise, set to a default. 
@@ -305,3 +313,4 @@ if __name__=="__main__":
     action = sys.argv[2]
     arg = sys.argv[3] if len(sys.argv)>3 else None 
     print(main(text, action, arg))
+    
