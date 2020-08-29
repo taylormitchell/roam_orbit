@@ -158,11 +158,14 @@ def convert_old_thought_provoking_names(block_content):
 
 
 def convert_toreview_scheduler(block_content):
-    kv = block_content.get_kv("feed")
-    if kv and kv.value=="ToReview":
+    feed = block_content.get_kv("feed")
+    schedule = block_content.get_kv("schedule")
+    if (not feed) or (not schedule):
+        return block_content
+    if feed.value=="ToReview" and schedule.value=="ExpDefault":
         block_content.set_kv("schedule", "ExpVarFactor")
         kv = block_content.get_kv("factor")
-        block_content.remove(kv)
+        if kv: block_content.remove(kv)
     return block_content
 
 
@@ -315,3 +318,4 @@ if __name__=="__main__":
     arg = sys.argv[3] if len(sys.argv)>3 else None 
     print(main(text, action, arg))
     
+
