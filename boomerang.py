@@ -24,6 +24,24 @@ class RoamComponentList(list):
                 res.append(c)
         return res
 
+    def get_kv(self, key):
+        for o in self:
+            if type(o)==KeyValue and o.key==key:
+                return o.value
+
+    def set_kv(self, key, value):
+        for o in self:
+            if type(o)==KeyValue and o.key==key:
+                o.value = value
+                return
+        self.append(KeyValue(key, value))
+
+    def add_tag(self, title):
+        for o in self:
+            if type(o)==Tag and o.title==title:
+                return
+        self.append(Tag(title))
+
     @classmethod
     def from_text(cls, text):
         parse_order = [Button, KeyValue, Tag, Page]
@@ -239,29 +257,6 @@ class KeyValue(RoamComponent):
         return f"#[[{self.key}{self.sep}{value}]]"
 
 
-class RoamComponentListKV(RoamComponentList):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def get_kv(self, key):
-        for o in self:
-            if type(o)==KeyValue and o.key==key:
-                return o.value
-
-    def set_kv(self, key, value):
-        for o in self:
-            if type(o)==KeyValue and o.key==key:
-                o.value = value
-                return
-        self.append(KeyValue(key, value))
-
-    def add_tag(self, title):
-        for o in self:
-            if type(o)==Tag and o.title==title:
-                return
-        self.append(Tag(title))
-
-
 class Boomerang:
     def __init__(self, text, interval=INIT_INTERVAL, due_date=None, counter_values=(0,0,0)):
         self.responses = ["1x", "2x", "3x"]
@@ -272,7 +267,7 @@ class Boomerang:
         self.name_tag = "Boomerang"
 
         # Split text into components
-        self.components = RoamComponentListKV.from_text(text)
+        self.components = RoamComponentList.from_text(text)
 
         # Set boomerang tracking data
 
@@ -334,7 +329,7 @@ class Boomerang:
 
 def roam_orbit_to_boomerang(text):
 
-    comps = RoamComponentListKV.from_text(text)
+    comps = RoamComponentList.from_text(text)
 
     metadata = {}
 
