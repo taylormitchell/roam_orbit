@@ -12,6 +12,10 @@ class RoamComponentList(list):
         for c in components:
             self.append(c)
 
+    @property
+    def tags(self):
+        return [c.title for c in self if type(c) in [Tag,Page]]
+
     def find(self, condition):
         for c in self:
             if condition(c):
@@ -267,7 +271,13 @@ class Boomerang:
         self.name_tag = "Boomerang"
 
         # Split text into components
-        self.components = RoamComponentList.from_text(text)
+        if type(text)==str:
+            self.components = RoamComponentList.from_text(text)
+        elif type(text)==RoamComponentList:
+            self.components = text
+        else:
+            raise ValueError("type of `text` passed to Boomerang is invalid")
+
 
         # Set boomerang tracking data
 
@@ -299,13 +309,14 @@ class Boomerang:
         else:
             interval_repr = "%.1fy" % (interval/365.0)
         response = self.responses[response_num]
-        title = title = f"{response} ({interval_repr})"
+        title = f"{response} ({interval_repr})"
 
         pat = f"{response} \(\d+.?\d?[dmy]\)"
         for o in self.components:
             if type(o)==Button and re.match(pat, o.title):
                 o.title = title
                 return
+        self.components.append(Text(" "))
         self.components.append(Button(title))
 
     def update(self, response_num):
@@ -327,11 +338,9 @@ class Boomerang:
         return self.components.to_string()
 
 
-def roam_orbit_to_boomerang(text):
+def split_out_args_for_boomerang(comps):
 
-    comps = RoamComponentList.from_text(text)
-
-    metadata = {}
+    args = {}
 
     # Get review history 
     review_history_btn = comps.find(lambda c: type(c)==Button and c.title=="Review History")
@@ -341,18 +350,18 @@ def roam_orbit_to_boomerang(text):
 
     # Get interval
     if comps.get_kv("interval"):
-        metadata["interval"] = int(comps.get_kv("interval"))
+        args["interval"] = int(comps.get_kv("interval"))
     elif has_review_history and review_history.get("Interval"):
-        metadata["interval"] = int(review_history.get("Interval"))
+        args["interval"] = int(review_history.get("Interval"))
     else:
         pass
 
     # Get due date
     if comps.get_kv("due"):
-        metadata["due_date"] = comps.get_kv("due")
+        args["due_date"] = comps.get_kv("due")
     elif has_review_history and review_history.get("Next Review"):
         due_kv = review_history.get("Next Review")
-        metadata["due_date"] = dt.datetime.strptime(due_kv, "[[due: %Y-%m-%d]]")
+        args["due_date"] = dt.datetime.strptime(due_kv, "[[due: %Y-%m-%d]]")
     else:
         pass
     
@@ -373,7 +382,7 @@ def roam_orbit_to_boomerang(text):
         counts.append(0)
     else:
         counts = [0,0,0]
-    metadata["counter_values"] = counts
+    args["counter_values"] = counts
 
     # Remove stuff
     comps_rem = []
@@ -412,11 +421,18 @@ def roam_orbit_to_boomerang(text):
     # add tags back
     comps += tags
 
-    return Boomerang(comps.to_string(), **metadata)
+    return comps, args
 
 
 def main(text, action, response_num=None):
-    boomerang = roam_orbit_to_boomerang(text)
+
+    comps = RoamComponentList.from_text(text)
+    if "SomedayMaybe" in comps.tags or "Roam Orbiter" in comps.tags:
+        comps, args = split_out_args_for_boomerang(comps)
+        boomerang = Boomerang(comps, **args)
+    else:
+        boomerang = Boomerang(comps)
+
     if action=="init":
         pass
     elif action=="update":
@@ -427,42 +443,8 @@ def main(text, action, response_num=None):
 
 
 if __name__=="__main__":
-
     text = sys.argv[1]
     action = sys.argv[2]
     response_num = int(sys.argv[3]) if len(sys.argv)>3 else None 
     print(main(text, action, response_num))
     sys.exit(0)
-
-    try:
-        #text = """Extract the interval, due date, and counters {{↑}} {{↓}}#[[Roam Orbiter]]#[[feed: ToReview]]#[[schedule: ExpVarFactor]]#[[interval: 2]]#[[due: 2020-08-31]]#[[factor_short: 2]]#[[factor_long: 3]]#[[feedback: Vote]]#[[↑_count: 0]]#[[↓_count: 0]]#[[total_count: 0]]"""
-        #print(text)
-        #boomerang = roam_orbit_to_boomerang(text)
-        #print(boomerang.to_string())
-        #print("")
-
-        #text = """{{[[DONE]]}} In the [[Remind me later]] feature, change the responses to "upvote/downvote". And record the upvotes and downvotes in the review history.   #SomedayMaybe #[[Programmable Attention]]  {{Review History: {"Interval": 65, "Past Reviews": ["[[reviewed: 2020-04-16]]", "[[reviewed: 2020-04-17]]", "[[reviewed: 2020-04-22]]", "[[reviewed: 2020-05-02]]", "[[reviewed: 2020-05-18]]", "[[reviewed: 2020-06-20]]"], "Next Review": "[[due: 2020-08-24]]"}}}  #[[[[done-date]]: 2020-08-24]] #@09:35"""
-        #print(text)
-        #boomerang = roam_orbit_to_boomerang(text)
-        #print(boomerang.to_string())
-        #print("")
-
-        text = """{{[[TODO]]}} [[To-Think]]: Why aren't there equivalents to [[Martial Arts]] gyms and belts for [[Knowledge]] based disciplines? What would that look like? {{thoughts}} {{none}}#[[Roam Orbiter]]#[[feed: ToThink]]#[[schedule: ExpReset]]#[[interval: 13]]#[[due: 2020-08-29]]#[[factor: 2]]#[[feedback: ThoughtProvoking]]#[[total_count: 1]]#[[thoughts_count: 1]]#[[none_count: 0]]"""
-        print(text)
-        boomerang = roam_orbit_to_boomerang(text)
-        print(boomerang.to_string())
-        print("")
-        boomerang.update(0)
-        print(boomerang.to_string())
-        print("")
-        boomerang.update(1)
-        print(boomerang.to_string())
-        print("")
-
-    except:
-        import sys; import pdb; import traceback
-        extype, value, tb = sys.exc_info()
-        traceback.print_exc()
-        pdb.post_mortem(tb)
-
-            
