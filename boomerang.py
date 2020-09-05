@@ -1,5 +1,7 @@
 import sys
+import argparse
 import re
+import inspect
 import datetime as dt
 import json
 from itertools import zip_longest
@@ -424,14 +426,14 @@ def split_out_args_for_boomerang(comps):
     return comps, args
 
 
-def main(text, action, response_num=None):
+def main(text, action, response_num=None, **kwargs):
 
     comps = RoamComponentList.from_text(text)
     if "SomedayMaybe" in comps.tags or "Roam Orbiter" in comps.tags:
         comps, args = split_out_args_for_boomerang(comps)
         boomerang = Boomerang(comps, **args)
     else:
-        boomerang = Boomerang(comps)
+        boomerang = Boomerang(comps, **kwargs)
 
     if action=="init":
         pass
@@ -442,9 +444,28 @@ def main(text, action, response_num=None):
     return boomerang.to_string()
 
 
+def get_default_args(func):
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
 if __name__=="__main__":
-    text = sys.argv[1]
-    action = sys.argv[2]
-    response_num = int(sys.argv[3]) if len(sys.argv)>3 else None 
-    print(main(text, action, response_num))
-    sys.exit(0)
+
+    default_args = get_default_args(Boomerang.__init__)
+
+    parser = argparse.ArgumentParser(description='Import flashcards from Roam to Anki')
+    parser.add_argument('text', type=str)
+    parser.add_argument('action', type=str)
+    parser.add_argument('response_num', type=int, nargs='?', default=None)
+    parser.add_argument('--interval', default=default_args['interval'], type=int, action="store")
+
+    #text = sys.argv[1]
+    #action = sys.argv[2]
+    #response_num = int(sys.argv[3]) if len(sys.argv)>3 else None 
+    #print(main(text, action, response_num, **kwargs))
+    
+    kwargs = vars(parser.parse_args())
+    print(main(**kwargs))
